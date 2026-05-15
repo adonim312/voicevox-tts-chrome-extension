@@ -93,6 +93,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// --- コマンド（ショートカット）による読み上げ ---
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command === "voicevox-read-selection" && tab && tab.id) {
+    try {
+      // 選択されているテキストを取得
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.getSelection().toString().trim()
+      });
+      
+      const text = results[0]?.result;
+      if (!text) {
+        showToastOnTab(tab.id, "❌ テキストが選択されていません", "error");
+        return;
+      }
+
+      // 新しい読み上げセッションを開始
+      const sessionId = Date.now();
+      sessionIds[tab.id] = sessionId;
+      chrome.tabs.sendMessage(tab.id, { action: "clearQueue" });
+
+      showToastOnTab(tab.id, "🔊 読み上げを開始します...", "info");
+      await speakTextInChunks(text, tab.id, sessionId);
+    } catch (err) {
+      console.error("[VOICEVOX TTS] 選択テキスト取得エラー:", err);
+      showToastOnTab(tab.id, "❌ テキストの取得に失敗しました", "error");
+    }
+  }
+});
+
 // ============================================================
 // テキストを文に分割して順次合成・送信する
 // ============================================================

@@ -21,6 +21,14 @@
       "js": ["content.js"]
     }
   ],
+  "commands": {
+    "voicevox-read-selection": {
+      "suggested_key": {
+        "default": "Alt+V"
+      },
+      "description": "選択したテキストをVOICEVOXで読み上げる"
+    }
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "VOICEVOX TTS 設定",
