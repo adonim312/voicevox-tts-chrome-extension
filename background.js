@@ -45,9 +45,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     // 新しいセッションIDを発番（古いループはこのIDと一致しないので自動的に停止する）
     const sessionId = Date.now();
     sessionIds[tab.id] = sessionId;
-    chrome.tabs.sendMessage(tab.id, { action: "clearQueue" });
+    chrome.runtime.sendMessage({ action: "clearQueue" });
 
     showToastOnTab(tab.id, "🔊 読み上げを開始します...", "info");
+    await setupOffscreenDocument("offscreen.html");
     await speakTextInChunks(text, tab.id, sessionId);
   }
 
@@ -61,8 +62,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       }
       const sessionId = Date.now();
       sessionIds[tab.id] = sessionId;
-      chrome.tabs.sendMessage(tab.id, { action: "clearQueue" });
+      chrome.runtime.sendMessage({ action: "clearQueue" });
       showToastOnTab(tab.id, "🔊 全文の読み上げを開始します...", "info");
+      await setupOffscreenDocument("offscreen.html");
       await speakTextInChunks(text, tab.id, sessionId);
     });
   }
@@ -70,20 +72,30 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "voicevox-stop") {
     sessionIds[tab.id] = null;
-    chrome.tabs.sendMessage(tab.id, { action: "clearQueue" });
+    chrome.runtime.sendMessage({ action: "clearQueue" });
     showToastOnTab(tab.id, "⏹ 読み上げを停止しました", "stop");
   }
 });
 
-// --- ポップアップからのメッセージ ---
+// --- ポップアップ等からのメッセージ ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "showToast") {
+    showToastOnTab(message.tabId, message.message, message.type);
+    return true;
+  }
+  
   if (message.action === "speak") {
     const tabId = message.tabId ?? null;
     const sessionId = Date.now();
     if (tabId) sessionIds[tabId] = sessionId;
-    speakTextInChunks(message.text, tabId, sessionId)
-      .then(() => sendResponse({ success: true }))
-      .catch((e) => sendResponse({ success: false, error: e.message }));
+    
+    // Popupからの再生でもOffscreenを使う
+    setupOffscreenDocument("offscreen.html").then(() => {
+      chrome.runtime.sendMessage({ action: "clearQueue" });
+      speakTextInChunks(message.text, tabId, sessionId)
+        .then(() => sendResponse({ success: true }))
+        .catch((e) => sendResponse({ success: false, error: e.message }));
+    });
     return true;
   }
   if (message.action === "stop") {
@@ -112,9 +124,10 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
       // 新しい読み上げセッションを開始
       const sessionId = Date.now();
       sessionIds[tab.id] = sessionId;
-      chrome.tabs.sendMessage(tab.id, { action: "clearQueue" });
+      chrome.runtime.sendMessage({ action: "clearQueue" });
 
       showToastOnTab(tab.id, "🔊 読み上げを開始します...", "info");
+      await setupOffscreenDocument("offscreen.html");
       await speakTextInChunks(text, tab.id, sessionId);
     } catch (err) {
       console.error("[VOICEVOX TTS] 選択テキスト取得エラー:", err);
@@ -151,8 +164,9 @@ async function speakTextInChunks(text, tabId, sessionId) {
 
       const isLast = (i === sentences.length - 1);
       if (tabId !== null) {
-        chrome.tabs.sendMessage(tabId, {
+        chrome.runtime.sendMessage({
           action: "enqueue",
+          tabId: tabId,
           audioBase64,
           isLast,
           index: i,
@@ -259,4 +273,24 @@ async function showToastOnTab(tabId, message, type) {
       args: [message, type],
     });
   } catch (_) {}
+}
+
+// ============================================================
+// Offscreen Document のセットアップ
+// ============================================================
+async function setupOffscreenDocument(path) {
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [chrome.runtime.getURL(path)]
+  });
+
+  if (existingContexts.length > 0) {
+    return;
+  }
+
+  await chrome.offscreen.createDocument({
+    url: path,
+    reasons: ['AUDIO_PLAYBACK'],
+    justification: 'VOICEVOX audio playback'
+  });
 }
