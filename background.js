@@ -2,7 +2,7 @@
 // background.js - VOICEVOX TTS Chrome拡張機能 サービスワーカー
 // ============================================================
 
-const VOICEVOX_URL = "http://localhost:50021";
+const VOICEVOX_URL = "http://127.0.0.1:50021";
 
 // セッションID（タブIDごとに管理）
 // 読み上げのたびに新しいIDを発番し、古いループが自分のIDと違ったら中断する

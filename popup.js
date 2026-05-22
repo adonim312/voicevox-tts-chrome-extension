@@ -2,7 +2,7 @@
 // popup.js - 設定管理とテスト読み上げ（文分割パイプライン版）
 // ============================================================
 
-const VOICEVOX_URL = "http://localhost:50021";
+const VOICEVOX_URL = "http://127.0.0.1:50021";
 
 const statusDot     = document.getElementById("statusDot");
 const statusText    = document.getElementById("statusText");

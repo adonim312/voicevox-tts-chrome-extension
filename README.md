@@ -8,7 +8,7 @@
 
 - **VOICEVOX** がローカルにインストールされ、起動していること  
   ダウンロード: https://voicevox.hiroshiba.jp/  
-  デフォルトAPIポート: `http://localhost:50021`
+  デフォルトAPIポート: `http://127.0.0.1:50021`
 
 ---
 
