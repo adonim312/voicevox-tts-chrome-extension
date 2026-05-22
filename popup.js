@@ -8,6 +8,7 @@ const statusDot     = document.getElementById("statusDot");
 const statusText    = document.getElementById("statusText");
 const statusLabel   = document.getElementById("statusLabel");
 const statusVersion = document.getElementById("statusVersion");
+const statusBar     = document.getElementById("statusBar");
 const speakerSel  = document.getElementById("speakerSelect");
 const speedSlider = document.getElementById("speed");
 const pitchSlider = document.getElementById("pitch");
@@ -25,10 +26,18 @@ let isPlaying    = false;
 let stopRequested = false;
 let waitIv = null; // 待機インターバルを追跡する
 let synthesisComplete = false; // 全文の合成が終わったかどうか
+let isCheckingConnection = false; // 再接続連打防止フラグ
 
 // --- VOICEVOX 接続確認 ---
 // 127.0.0.1 → localhost の順に試行し、成功した方をVOICEVOX_URLとして使い続ける
 async function checkConnection() {
+  isCheckingConnection = true;
+  // 確認中の表示
+  statusDot.className = "status-dot checking";
+  statusLabel.className = "";
+  statusLabel.textContent = "VOICEVOXに接続確認中...";
+  statusVersion.textContent = "";
+
   const candidates = [
     "http://127.0.0.1:50021",
     "http://localhost:50021",
@@ -42,9 +51,11 @@ async function checkConnection() {
         // 成功したURLをグローバルに反映
         VOICEVOX_URL = url;
         statusDot.className = "status-dot connected";
+        statusLabel.className = "";
         statusLabel.textContent = "VOICEVOX 接続済み";
         statusVersion.textContent = `　v${v}`;
         console.log(`[VOICEVOX TTS] 接続成功: ${url}`);
+        isCheckingConnection = false;
         return;
       }
     } catch (err) {
@@ -57,6 +68,7 @@ async function checkConnection() {
   statusLabel.className = "error";
   statusLabel.textContent = "未接続　VOICEVOXを起動してください";
   statusVersion.textContent = "";
+  isCheckingConnection = false;
 }
 
 // --- 設定の読み込み・保存 ---
@@ -253,6 +265,18 @@ pitchSlider.addEventListener("input",  () => { updateDisplayValues(); saveSettin
 volSlider.addEventListener("input",    () => { updateDisplayValues(); saveSettings(); });
 speakBtn.addEventListener("click", speakTest);
 stopBtn.addEventListener("click",  stopTest);
+
+// ステータスバークリックで再接続
+statusBar.addEventListener("click", async () => {
+  if (isCheckingConnection) return; // 連打防止
+  showPopupToast("🔄 再接続を試行中...");
+  await checkConnection();
+  if (statusDot.classList.contains("connected")) {
+    showPopupToast("✅ VOICEVOXに接続しました");
+  } else {
+    showPopupToast("❌ 接続できませんでした");
+  }
+});
 
 // --- 初期化 ---
 (async () => {

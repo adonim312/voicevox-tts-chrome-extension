@@ -78,6 +78,31 @@
       align-items: center;
       gap: 8px;
       border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+
+    .status-bar:hover {
+      background: var(--surface2);
+      border-color: rgba(110, 231, 247, 0.25);
+    }
+
+    .status-bar:active {
+      transform: scale(0.98);
+    }
+
+    .status-bar .reconnect-hint {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    .status-bar:hover .reconnect-hint {
+      opacity: 1;
     }
 
     .status-dot {
@@ -351,9 +376,10 @@
   </div>
 </div>
 
-<div class="status-bar">
+<div class="status-bar" id="statusBar" title="クリックして再接続">
   <div class="status-dot checking" id="statusDot"></div>
   <div class="status-text" id="statusText"><span id="statusLabel">VOICEVOXに接続確認中...</span><span id="statusVersion"></span></div>
+  <span class="reconnect-hint">🔄 再接続</span>
 </div>
 
 <div class="content">
