@@ -2,7 +2,7 @@
 // popup.js - 設定管理とテスト読み上げ（文分割パイプライン版）
 // ============================================================
 
-const VOICEVOX_URL = "http://127.0.0.1:50021";
+let VOICEVOX_URL = "http://127.0.0.1:50021";
 
 const statusDot     = document.getElementById("statusDot");
 const statusText    = document.getElementById("statusText");
@@ -27,21 +27,36 @@ let waitIv = null; // 待機インターバルを追跡する
 let synthesisComplete = false; // 全文の合成が終わったかどうか
 
 // --- VOICEVOX 接続確認 ---
+// 127.0.0.1 → localhost の順に試行し、成功した方をVOICEVOX_URLとして使い続ける
 async function checkConnection() {
-  try {
-    const res = await fetch(`${VOICEVOX_URL}/version`);
-    if (res.ok) {
-      const v = (await res.text()).replace(/"/g, "");
-      statusDot.className = "status-dot connected";
-      statusLabel.textContent = "VOICEVOX 接続済み";
-      statusVersion.textContent = `　v${v}`;
-    } else throw new Error();
-  } catch {
-    statusDot.className = "status-dot";
-    statusLabel.className = "error";
-    statusLabel.textContent = "未接続　VOICEVOXを起動してください";
-    statusVersion.textContent = "";
+  const candidates = [
+    "http://127.0.0.1:50021",
+    "http://localhost:50021",
+  ];
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(`${url}/version`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const v = (await res.text()).replace(/"/g, "");
+        // 成功したURLをグローバルに反映
+        VOICEVOX_URL = url;
+        statusDot.className = "status-dot connected";
+        statusLabel.textContent = "VOICEVOX 接続済み";
+        statusVersion.textContent = `　v${v}`;
+        console.log(`[VOICEVOX TTS] 接続成功: ${url}`);
+        return;
+      }
+    } catch (err) {
+      console.warn(`[VOICEVOX TTS] ${url} 接続失敗:`, err.message);
+    }
   }
+
+  // すべて失敗
+  statusDot.className = "status-dot";
+  statusLabel.className = "error";
+  statusLabel.textContent = "未接続　VOICEVOXを起動してください";
+  statusVersion.textContent = "";
 }
 
 // --- 設定の読み込み・保存 ---
