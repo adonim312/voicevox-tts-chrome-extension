@@ -56,15 +56,21 @@
 ```
 voicevox-tts-extension/
 ├── manifest.json   # 拡張機能の設定
-├── background.js   # サービスワーカー（API通信・コンテキストメニュー）
-├── content.js      # コンテンツスクリプト（音声キュー管理・順次再生）
-├── popup.html      # ポップアップUI
+├── background.js   # サービスワーカー（API通信・コンテキストメニューの制御）
+├── content.js      # コンテンツスクリプト（WEBページ内へのトースト表示）
+├── offscreen.html  # オフスクリーンドキュメント（音声再生用UIなしHTML）
+├── offscreen.js    # 音声再生用ロジック（音声キュー管理・再生）
+├── popup.html      # ポップアップUI（パラメーター調整、テスト読み上げ）
 ├── popup.js        # ポップアップのロジック
 └── icons/
     ├── icon16.png
     ├── icon48.png
     └── icon128.png
 ```
+
+### 💡 音声再生の仕組み（Offscreen Document）
+Chrome 拡張機能 Manifest V3 の仕様により、バックグラウンド（Service Worker）で音声を直接再生することができません。  
+そのため、本拡張機能では音声再生を目的とした目に見えない裏画面（`offscreen.html` / `offscreen.js`）を動的に立ち上げ、そこで `Audio` オブジェクトを使って音声を再生しています。
 
 ---
 
